@@ -1,8 +1,7 @@
 import socket 
 import threading
 
-
-HOST = '127.0.0.1'
+HOST = '127.0.0.1' #I THINK we have to change this cause we cant use this IP. but  
 SERVERPORT = 5000
 
 
