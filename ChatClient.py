@@ -1,7 +1,9 @@
 import socket
 import threading
 
-HOST = '127.0.0.1' #Haik - I THINK we cant use this IP so we'll need to change it, keeping for now so we can test stuff.
+
+#Haik - these have to match the server IP and port in order to connect 
+HOST = '127.0.0.1' #Haik - I THINK we cant use this IP so we'll need to change it, keeping for now so we can test stuff. 
 SERVER_PORT = 5000
 
 if __name__ == '__main__':
