@@ -12,7 +12,8 @@ if __name__ == '__main__':
     mainServer = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
     try:
-        mainServer.bind((HOST, SERVERPORT))
+        mainServer.bind((HOST, SERVERPORT)) #Haik - binds the server to the host and port number. if it doesnt work, it prints the error.
     except:   
-        print(f"Unable to bind to host {HOST} and server port {SERVERPORT}.") 
+        print(f"Unable to bind to host {HOST} and server port {SERVERPORT}.") #error message
+
 
