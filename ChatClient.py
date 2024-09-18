@@ -11,7 +11,13 @@ if __name__ == '__main__':
     #Haik - Created client instance, takes ipv4 and tcp packets
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
-    try:
+    try: #Haik - trys connecting to server
         client.connect((HOST, SERVER_PORT))
+        print("Connected!")
+        
+        #Haik - sends message to the server with max size of 1024 bytes
+        sendMessage = client.send(1024)
+        
     except:
         print(f"Unable to connect to host {HOST} and port {SERVER_PORT}. ")
+    
