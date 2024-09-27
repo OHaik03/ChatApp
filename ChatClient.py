@@ -8,7 +8,7 @@ SERVER_PORT = 5000
 
 def getMessage():
     print("Hi")
-
+    
 if __name__ == '__main__':
     
     #Haik - Created client instance, takes ipv4 and tcp packets
@@ -18,9 +18,7 @@ if __name__ == '__main__':
         client.connect((HOST, SERVER_PORT))
         print("Connected!")
         
-        #Haik - sends message to the server with max size of 1024 bytes
-        sendMessage = client.send(1024)
-        
+     
     except:
         print(f"Unable to connect to host {HOST} and port {SERVER_PORT}. ")
-    
+         
