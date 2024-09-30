@@ -11,7 +11,7 @@ SERVER_PORT = 5000
 def getMessage():
     print("Hi")
     
-if __name__ == '__main__':
+def client_start():
     
     #Haik - Created client instance, takes ipv4 and tcp packets
     #Jian - Changed socket parameter SOCK_STREAM to SOCK_DGRAM to connect client, had issues connecting earlier
@@ -19,7 +19,11 @@ if __name__ == '__main__':
     
     try: #Haik - trys connecting to server
         client.connect((HOST, SERVER_PORT))
-        print("Connected!")
+        print(f"You Connected!")
+        
+        # Jian (debugging) - test to check your IP
+        print(f"Your IP: " + client.getsockname()[0])
+
         
      
     except:
