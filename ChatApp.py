@@ -1,7 +1,7 @@
 import socket 
 import threading
 
-HOST = ' ' #I THINK we have to change this cause we cant use this IP. but  
+HOST = "0.0.0.0" #I THINK we have to change this cause we cant use this IP. but  
 SERVERPORT = 5000
 USERS = 4
 currentUsers = [] #Haik - lists of users with their IP
@@ -35,23 +35,29 @@ def manageClient():#Haik - puts client into user list with their IP address
 
 
 def whileListening():
-    #print("I am in here")
+    mainServer.listen()#Haik - listens for incoming connections
 
-    mainServer.listen(USERS)#Haik - listens for incoming connections
+    # Debugging: Check if enters whileListening()
+    print(f"Listening...")
+    
+    # Jian - Currently crashes file, runs main's catch statement
     print(f"I am in here. connected to {client} {address[0]} {address[1]}")
+
+
 
     
     while 1: #Haik - accepts incoming connections 
         client, address = mainServer.accept()
         print("I am in while")
-
+        
         threading.Thread(target = manageClient, args=(client, )).start()
 
 
 if __name__ == '__main__':
     
     #Haik - created socket class object for the mainServer. SOCK_DGRAM lets us use tcp datagrams
-    mainServer = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    # Jian - Changed SOCK_DGRAM to SOCK_STREAM to utilize socket.listen() in whileListening Function
+    mainServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     #Haik - after it starts running, it confirms it is set up then says it is unable to set up.
     try:
