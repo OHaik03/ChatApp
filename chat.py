@@ -35,26 +35,42 @@ def handle_client(client_socket, client_address):
 # Function to handle user input commands in a separate thread
 def handle_user_input(ip_address, port, sockets_list, clients):
     while True:
-        command = input().strip()  # Read the command from the user
-        command_parts = command.split()  # Split the command into parts for parsing
+        command = input().strip()  # Wait for the user to enter a command and remove any extra spaces
+        command_parts = command.split()  # Split the command into words to make it easier to process
 
-        if command_parts[0] == "help":
-            help_list()
-        elif command_parts[0] == "myip":
-            print(f"My IP address: {ip_address}")
-        elif command_parts[0] == "myport":
-            print(f"My port number: {port}")
-        elif command_parts[0] == "connect" and len(command_parts) == 3:
-            destination_ip = command_parts[1]
-            destination_port = int(command_parts[2])
-            connect_to_peer(destination_ip, destination_port, sockets_list, clients)
-        elif command_parts[0] == "exit":
-            print("Exiting the program...")
-            for sock in sockets_list:  # Close all sockets
-                sock.close()
-            sys.exit(0)
-        else:
-            print("Unknown command. Type 'help' for available commands.")
+        if command_parts[0] == "help":  # If the command is 'help'
+            help_list()  # Call the function to display the list of available commands
+
+        elif command_parts[0] == "myip":  # If the command is 'myip'
+            print(f"My IP address: {ip_address}")  # Display the server's IP address
+
+        elif command_parts[0] == "myport":  # If the command is 'myport'
+            print(f"My port number: {port}")  # Display the port number the server is using
+
+        elif command_parts[0] == "connect" and len(command_parts) == 3:  # If the command is 'connect' and has the right format
+            destination_ip = command_parts[1]  # Get the destination IP address from the command
+            destination_port = int(command_parts[2])  # Get the destination port number from the command
+            connect_to_peer(destination_ip, destination_port, sockets_list, clients)  # Call the function to connect to the peer
+
+        elif command_parts[0] == "list": # If the command is 'list'
+            if clients: # Check if there are any active connection in the clients dictionary
+                print("Actice connections:") # Header for list of connections
+                # Loop for each client connection and display the detail
+                # 'idx' holes the index of the current item in the iteration
+                # 'enumerate' adds a numerical index to each of these items, start from 1 
+                for idx, (client_socket, (client_ip, client_port)) in enumerate(clients.items(), start=1):
+                    print(f"{idx}: {client_ip}:{client_port}") # Print the connection index, IP address, and port number
+            else:
+                print("No active connections now.") # Display a message if there are no connections
+
+        elif command_parts[0] == "exit":  # If the command is 'exit'
+            print("Exiting the program...")  # Inform the user that the program is closing
+            for sock in sockets_list:  # Loop through all the sockets in the list
+                sock.close()  # Close each socket to release the resources
+            sys.exit(0)  # Exit the program safely
+
+        else:  # If the command is not recognized
+            print("Unknown command. Type 'help' for available commands.")  # Display an error message for invalid commands
 
 
 # Function to connect to a remote peer and add the connection to the list
