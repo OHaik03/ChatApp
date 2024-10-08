@@ -1,11 +1,9 @@
 import socket  # For socket programming use
-import threading  # For handling multiple connections concrurrently
+import threading  # For handling multiple connections concurrently
 import select  # For using select() to handle multiple connections
 import sys  # For handling command-line arguments and standard input
 
-# Create a function to display all the helps menu with the available commands
-
-
+# Function to display the help menu with available commands
 def help_list():
     print("Commands available:")
     print("1. help - Display the available commands.")
@@ -17,111 +15,102 @@ def help_list():
     print("7. send <connection id> <message> - Send a message to a connection.")
     print("8. exit - Close all connections and terminate the program.")
 
-# Create a function to get the actual IP address of this machine
-
-
+# Function to get the actual IP address of this machine
 def get_ip_address():
-    return socket.gethostbyname(socket.gethostbyname())
+    return socket.gethostbyname(socket.gethostname())  # Get the machine's IP address
 
-# Create a function to handle each client's connection in a separate thread
-
-
+# Function to handle each client's connection in a separate thread
 def handle_client(client_socket, client_address):
-    # Continuously listen for message from the connected client (handle errors without crash)
     try:
         while True:
-            # Read incoming daa from the client (max amout date is 1024 bytes)
-            message = client_socket.recv(1024)
-            if message:  # If there is message from the client
-                # client_address[0] and client_address[1] meansing IP address and port number
-                # message.decode('utf-8') means to converts the received byte data into a string format using utf-8 encoding
+            message = client_socket.recv(1024)  # Read incoming data from the client
+            if message:  # If there is a message from the client
                 print(f"Message from {client_address[0]}:{client_address[1]} - {message.decode('utf-8')}")
-            else:  # If no message received, the client has disconnected
-                print(f"Client {client_address[0]}:{client_address[1]} hass disconnected.")
+            else:  # If no message is received, the client has disconnected
+                print(f"Client {client_address[0]}:{client_address[1]} has disconnected.")
                 break  # Exit the loop to close the connection
-    # Ensure the client socket is always closed when done, even with an error occurs
     finally:
-        client_socket.close()  # Close the client socket when the clients disconnected
+        client_socket.close()  # Close the client socket when the client disconnects
 
-# Create a main function in order to start the chat server
+# Function to handle user input commands in a separate thread
+def handle_user_input(ip_address, port, sockets_list, clients):
+    while True:
+        command = input().strip()  # Read the command from the user
+        command_parts = command.split()  # Split the command into parts for parsing
+
+        if command_parts[0] == "help":
+            help_list()
+        elif command_parts[0] == "myip":
+            print(f"My IP address: {ip_address}")
+        elif command_parts[0] == "myport":
+            print(f"My port number: {port}")
+        elif command_parts[0] == "connect" and len(command_parts) == 3:
+            destination_ip = command_parts[1]
+            destination_port = int(command_parts[2])
+            connect_to_peer(destination_ip, destination_port, sockets_list, clients)
+        elif command_parts[0] == "exit":
+            print("Exiting the program...")
+            for sock in sockets_list:  # Close all sockets
+                sock.close()
+            sys.exit(0)
+        else:
+            print("Unknown command. Type 'help' for available commands.")
 
 
+# Function to connect to a remote peer and add the connection to the list
+def connect_to_peer(destination_ip, destination_port, sockets_list, clients):
+    try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Create a TCP socket
+        client_socket.connect((destination_ip, destination_port))  # Connect to the remote peer
+
+        # Add the new connection to the list of sockets and clients
+        sockets_list.append(client_socket)
+        clients[client_socket] = (destination_ip, destination_port)
+
+        print(f"Connected to {destination_ip}:{destination_port}")
+    except Exception as e:
+        print(f"Failed to connect to {destination_ip}:{destination_port}. Error: {e}")
+
+# Main function to start the chat server
 def main():
-    # Chect if the port number is proved as a command-line argument
-    if len(sys.argv) != 2:  # If the length != 2, it means the user didn't provide the required port number
+    # Check if the port number is provided as a command-line argument
+    if len(sys.argv) != 2:
         print("Usage: python chat.py <port>")
-        # Generally indicates an error. It stops the execution because the port num was not supplied
-        sys.exit(1)
+        sys.exit(1)  # Stop the execution because the port number was not supplied
 
-    # Get the port number from the command-line argument
-    port = int(sys.argv[1])
-    ip_address = get_ip_address  # Get the IP address of this machine
+    port = int(sys.argv[1])  # Get the port number from the command-line argument
+    ip_address = get_ip_address()  # Get the IP address of this machine
 
     # Create and set up the listening socket for incoming connections
-    # AF_INET means Address Family - Internet; socket will use IPv4 address protocol
-    # SOCK_STREAM means socket type is TCP
-    # Create TCP socket using IPv4 communication
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Bind the socket to the IP address and port
-    server_socket.bind((ip_address, port))
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Create a TCP socket using IPv4
+    server_socket.bind((ip_address, port))  # Bind the socket to the IP address and port
     server_socket.listen(3)  # Start listening with a backlog of 3 connections
     print(f"Chat server started on {ip_address}:{port}")
-    print(f"Type 'help' to see the list of available commands.")
+    print("Type 'help' to see the list of available commands.")
 
     # List to keep track of socket connections
-    # Includes the server socket and standard input(commands)
-    sockets_list = {server_socket, sys.stdin}
+    sockets_list = [server_socket]  # Includes only the server socket for select
     clients = {}  # Dictionary to keep track of connected clients
 
+    # Start a separate thread to handle user input
+    user_input_thread = threading.Thread(target=handle_user_input, args=(ip_address, port, sockets_list, clients))
+    user_input_thread.daemon = True  # Set as a daemon thread so it closes when the main program exits
+    user_input_thread.start()
+
     while True:
-        # Use select to monitor multiple sockets and standard input
-        # The first assingment only interested in the sockets that are ready to be read, ignore the other 2 list
+        # Use select to monitor multiple sockets (only sockets, no standard input)
         read_sockets, _, _ = select.select(sockets_list, [], [])
 
         for notified_socket in read_sockets:
-            # If the event is on the server socket, it means a new connection is incoming
-            if notified_socket == server_socket:
-                # If the server socket is notified, accept a new cliect connection
+            if notified_socket == server_socket:  # A new connection is incoming
                 client_socket, client_address = server_socket.accept()
-                # Add the new client socket to the list
-                sockets_list.append(client_socket)
-                # Keep track of the client's address
-                clients[client_socket] = client_address
-                # client_address[0] and client_address[1] meansing IP address and port number
+                sockets_list.append(client_socket)  # Add the new client socket to the list
+                clients[client_socket] = client_address  # Keep track of the client's address
                 print(f"New connection established from {client_address[0]}:{client_address[1]}")
 
                 # Create a new thread to handle the client's connection
-                # client_thread creats a new thread in the program
-                # target = handle_client means the function that the new thread will run
-                # args = (client_socket, client_address) means the thread will use these values to interact with specific client
-                client_thread = threading.Thread(
-                    target=handle_client, args=(client_socket, client_address))
-                # Start the new created thread to handle communication with the client
-                client_thread.start()
+                client_thread = threading.Thread(target=handle_client, args=(client_socket, client_address))
+                client_thread.start()  # Start the new thread to handle communication with the client
 
-            # If the event is on standard input (when user typed a command)
-            elif notified_socket == sys.stdin:
-                command = input().strip()  # Read the command from the user
-
-                # For handle different comments
-                if command == "help":
-                    help_list()
-
-                elif command == "myip":
-                    print(f"IP address: {ip_address}")
-
-                elif command == "myport":
-                    print(f"Port number: {port}")
-
-                elif command == "exit":
-                    print("Exiting the program...")
-                    for sock in socket_list:  # Repeat through each socket stored in the socket_list
-                        sock.close()  # Close all sockets
-                    # Exit the program with a success status. If it's non-zero value, there will be an error.
-                    sys.exit(0)
-
-            else:
-                print("Unknown command. Type 'help' for available commands.")
-                
 if __name__ == "__main__":
     main()  # Call the main function to start the server
