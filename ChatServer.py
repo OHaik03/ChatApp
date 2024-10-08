@@ -32,7 +32,6 @@ def get_clientSocket(client):
    return clientSocket
 
 def manageClient():#Haik - puts client into user list with their IP address
-        
     while 1:
         currentUsers.append(get_clientIP) 
 
@@ -44,7 +43,7 @@ def whileListening():
     mainServer.listen(USERS)
 
     # (Debugging): Check if enters whileListening()
-    print(f"Listening...")
+    print(f"Server Listening...")
     
     # Jian - Currently crashes file, temporarily commented out 
     # print(f"I am in here. connected to {client} {address[0]} {address[1]}")
@@ -53,7 +52,7 @@ def whileListening():
 
     
     while 1: #Haik - accepts incoming connections
-        print("I am in while")
+        print("Server in while")
         client, address = mainServer.accept()
         
         threading.Thread(target = manageClient, args=(client, )).start()
