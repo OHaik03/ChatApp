@@ -23,12 +23,19 @@ def get_ip_address():
 def handle_client(client_socket, client_address):
     try:
         while True:
-            message = client_socket.recv(1024)  # Read incoming data from the client
-            if message:  # If there is a message from the client
-                print(f"Message from {client_address[0]}:{client_address[1]} - {message.decode('utf-8')}")
-            else:  # If no message is received, the client has disconnected
-                print(f"Client {client_address[0]}:{client_address[1]} has disconnected.")
-                break  # Exit the loop to close the connection
+            try:
+                message = client_socket.recv(1024)  # Read incoming data from the client
+                if message:  # If there is a message from the client
+                    print(f"Message from {client_address[0]}:{client_address[1]} - {message.decode('utf-8')}")
+                else:   # If no message is received, the client has disconnected
+                    print(f"Client {client_address[0]}:{client_address[1]} has disconnected.")
+                    break   # Exit the loop to close the connection
+            except ConnectionAbortedError:
+                print(f"Connection with {client_address[0]}:{client_address[1]} was terminated.")
+                break   # Break the loop if the connection was closed or aborted
+            except ConnectionResetError:
+                print(f"Connection with {client_address[0]}:{client_address[1]} was reset by the remote server.")
+                break   # Handle when the server forcefully closes the connection
     finally:
         client_socket.close()  # Close the client socket when the client disconnects
 
@@ -62,6 +69,20 @@ def handle_user_input(ip_address, port, sockets_list, clients):
                     print(f"{idx}: {client_ip}:{client_port}") # Print the connection index, IP address, and port number
             else:
                 print("No active connections now.") # Display a message if there are no connections
+        
+        elif command_parts[0] == "terminate" and len(command_parts) == 2: # If the command is 'terminate' and has the correct format
+            try:
+                connection_id = int(command_parts[1]) # Get the connection ID to terminate
+                if 1 <= connection_id <= len(clients): # Check if the ID is within a valid range
+                    client_socket = list(clients.keys())[connection_id - 1] # Get the client socket using the connection ID
+                    sockets_list.remove(client_socket) # Remove the socket from the list of active sockets
+                    del clients[client_socket] # Remove the client from the dictionary of active clients
+                    client_socket.close() # Close the client socket to terminate the connection
+                    print(f"Connection {connection_id} has been terminated.") # Confirm the termination
+                else:
+                    print("Invalid connection ID. Use the 'list' command to see active connections.") # Error message for invalid ID
+            except ValueError:
+                print("Invalid input. Please provide a valid connection ID number.") # Error message if the input is not a number
 
         elif command_parts[0] == "exit":  # If the command is 'exit'
             print("Exiting the program...")  # Inform the user that the program is closing
