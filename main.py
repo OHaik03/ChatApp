@@ -1,6 +1,7 @@
 import socket
 import threading
 from ChatServer import server_start
+# Runs Client code for some reason...
 from ChatClient import client_start
 
 

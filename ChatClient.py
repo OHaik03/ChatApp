@@ -3,8 +3,8 @@ import threading
 
 #Haik - these have to match the server IP and port in order to connect 
 #Haik - I THINK we cant use this IP so we'll need to change it, keeping for now so we can test stuff. 
-#Jian - Changed HOST to '8.8.8.8' to utilize user's IP as parameter
-HOST = '8.8.8.8'
+#Jian - Changed CLIENT_HOST to '8.8.8.8' to utilize user's IP as parameter
+CLIENT_HOST = '8.8.8.8'
 CLIENT_PORT = 5000
 
 
@@ -15,19 +15,20 @@ def client_start():
         #Jian - Changed socket parameter SOCK_STREAM to SOCK_DGRAM to connect client, had issues connecting earlier
         global client
         client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        client.connect((HOST, CLIENT_PORT))
+        client.connect((CLIENT_HOST, CLIENT_PORT))
         print(f"You Connected!")
         # Jian (debugging) - test to check your IP
         print(f"Your IP: " + client.getsockname()[0])
     except socket.error:
-        print(f"Unable to connect to host {HOST} and port {CLIENT_PORT}. ")
+        print(f"Unable to connect to CLIENT_HOST {CLIENT_HOST} and port {CLIENT_PORT}. ")
    
    
 while True:
-    choice = input("(1)Start Client\n> ")
+    choice = input("Enter a number:\n(1) Start Client\n> ")
     if choice == '1':
         client_start()
         break
+
 
 disconnect = False
 
