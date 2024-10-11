@@ -124,16 +124,17 @@ def listen():
 
 # yongk This function is to list all the connections
 def list_connection():
-    # Check if there are active connection
+    # Check if there are active connections
     if len(currentUsers) > 0:  # If the currentUsers list is not empty
         print("Here are the current connections:")
         
-        # Loop through each user in the list and display their details
-        for i in range(len(currentUsers)):
-            client = currentUsers[i]  # This will get the client information from the list
-            print(f"{i + 1}: {client}")  # This shows the client number and IP address
+        # This the loop through each user in the list 
+        index = 1  # It start the index at 1 
+        for client_info in currentUsers:
+            print(f"{index}: {client_info}")  # Display the client number and IP address
+            index += 1  # Increment the index for each client
     else:
-        print("No active connections at this moment.")  # This shows a message when no users are connect
+        print("No active connections at this moment.")  # This is a message when no users are connected
                     
 # yongk   
 def send():
