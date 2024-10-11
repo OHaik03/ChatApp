@@ -6,7 +6,7 @@ import sys
 # Jian - Special placeholder IP to tell Server to listen and accept connections from ALL IPs
 HOST = "0.0.0.0"
 USERS = 4
-currentUsers = [] #Haik - lists of users with their IP
+currentUsers = {} #Haik - lists of users with their IP
 
 
 #Haik - created socket class object for the mainServer. SOCK_DGRAM lets us use tcp datagrams
@@ -146,6 +146,10 @@ def takeCommands(): #Haik - method for detecting and processing commands
             print("Your IP is: " + str(get_clientIP(client)))
         elif command == "/myport":#Haik - prints port
             print("Your port is: " + str(get_clientSocket(client)))
+        elif command == "/exit":  #Haik - Closes connection and application
+            print("Exiting the program.")  
+            #add the closing connections
+            sys.exit(0)#Haik - the program closes
 
 def help_list():
     print("Commands available:")
