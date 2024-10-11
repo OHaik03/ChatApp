@@ -99,6 +99,11 @@ def client_start():
         
         send_thread = threading.Thread(target=send)
         send_thread.start()
+        
+        # yongk
+        receive_thread = threading.Thread(target = receive)
+        receive_thread.start()
+        
     except:
         print(f"Unable to connect to host {HOST} and port {PORT}. ")
 
@@ -130,7 +135,7 @@ def list_connection():
     else:
         print("No active connections at this moment.")  # This shows a message when no users are connect
                     
-# yongk     
+# yongk   
 def send():
     
     while True:
@@ -147,13 +152,38 @@ def send():
                 message = input ("Enter your message: ").strip() # This will get the user's message
                 
                 # This will use the connection ID to get the client socket
-    
-def receive(server, message):
-        if message != '':
-            final = server.recv(2048).decode('utf-8')
+                clientSocket = currentUsers[connection_id - 1]
+                
+                # This will send the message to the connection you select
+                clientSocket.sendall(message.encode('utf-8'))
+                print(f"You send a message to connection {connection_id}.")
+            else:
+                print("You entered invalid connection ID. Tpye the /list command to see the list of active connections.")
+        
+        except ValueError:
+            print("You need to enter a valid connection ID number.")
             
-        else:
-            print("The message is empty")
+        except Exception as e:
+            print(f"There is an error occurred while sending the message: {e}")
+
+# yongk 
+def receive():
+    while True:
+        try:
+            # This will try to receive a message from the server
+            message = client.recv(2048).decode('utf-8')  # This is going to read and decode the coming message
+            
+            if message:  # THis will check if we received a message or not
+                print(f"You got a new message: {message}")  # Display the message to the user
+                
+            else: # If there is no message, server might have disconnected
+                print("You did not get the message. The connection might be closed by the server.")  
+                break  # So we exit the loop since the connection to the server is lost
+            
+        except Exception as e:
+            print(f"Oh no, something is wrong when receiving the message: {e}")  # This will handle the errors 
+            client.close()  # If there is error, the client connection will close
+            break  # Exit this loop to stop receiving messages)
 
 def takeCommands(): #Haik - method for detecting and processing commands
     while True:
@@ -163,6 +193,9 @@ def takeCommands(): #Haik - method for detecting and processing commands
             
         elif command == '/list': # yongk
             list_connection()
+            
+        elif command == '/send':  # yongk
+            send() 
 
 def help_list():
     print("Commands available:")
