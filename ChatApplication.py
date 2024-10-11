@@ -4,7 +4,7 @@ import threading
 import sys
 
 # Jian - Special placeholder IP to tell Server to listen and accept connections from ALL IPs
-HOST = "127.0.0.1"
+HOST = "0.0.0.0"
 USERS = 4
 currentUsers = {} #Haik - Stores connected users' IP : Port
 
@@ -48,7 +48,6 @@ def accepting():
         client, address = mainServer.accept()
         print("Connected to " + address[0] + str(address[1]))
         #Haik - start multi threading to manage the users 
-        threading.Thread(target = manageClient, args=(client, )).start()
 
 def whileListening():
     #Haik - listens for incoming connections
@@ -63,22 +62,21 @@ def whileListening():
     manageClientThread.start()
     print("I am accepting.")
     # Jian - Currently crashes file, temporarily commented out 
-
-        
-
+    
 
 def server_start():    
     #Haik - after it starts running, it confirms it is set up then says it is unable to set up.
     try:
         #Haik - binds the server to the host and port number. if it doesnt work, it prints the error.
-        mainServer.bind((HOST, SOCKET))
+        mainServer.bind((HOST, PORT))
         print(f"Server is set up!")
-        whileListening()
+        #whileListening()
         
     except:   
         print(f"Unable to bind to host {HOST} and server port {PORT}.") #error message
         sys.exit(1)
 
+    whileListening()
 
 #Haik - these have to match the server IP and port in order to connect 
 #Haik - I THINK we cant use this IP so we'll need to change it, keeping for now so we can test stuff. 
@@ -87,19 +85,19 @@ def server_start():
 disconnect = False
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
-def client_start():
+def client_start(IP, passPort):
     #Haik - Created client instance, takes ipv4 and tcp packets
     #Jian - Changed socket parameter SOCK_STREAM to SOCK_DGRAM to connect client, had issues connecting earlier
     # HOST = "8.8.8.8"
 
     try: #Haik - trys connecting to server
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((HOST, PORT))
-        print(f"You connected to {HOST} {PORT}!")
+        client.connect((IP, passPort))
+        print(f"You connected to {IP} {passPort}!")
         print("Client IP: " + client.getsockname()[0])
         manageClient(client)
     except:
-        print(f"Unable to connect to host {HOST} and port {PORT}. ")
+        print(f"Unable to connect to host {IP} and port {passPort}. ")
         sys.exit(1)
 
 
@@ -143,32 +141,37 @@ def send():
             break
         # Jian - asks for input and formats message
         message = f'Message received from {client.getsockname()[0]}\n'
-        message += f'Sender\'s Port: {SOCKET}\n'
+        message += f'Sender\'s Port: {PORT}\n'
         message += f'Message: {input("")}'
         if message[22 + len(client.getsockname()[0]) + 15 + len(PORT) + 11].startswith('/'):
             print("this is a command") #Jian - Implement later
             
-    
-def receive(server, message):
-        if message != '':
-            final = server.recv(2048).decode('utf-8')
-            
-        else:
-            print("The message is empty")
 
 def takeCommands(): #Haik - method for detecting and processing commands
     while True:
         command = input().strip()#Haik - prints comand menu without spaces
         if command == '/help':
             help_list()
+            
         elif command == '/myip': #Haik - prints ip
             print("Your IP is: " + str(get_clientIP(client)))
+            
         elif command == "/myport":#Haik - prints port
             print("Your port is: " + str(get_clientSocket(client)))
+            
+        elif command == "/connect":
+            parts = command.split()
+            if len(parts) == 3:
+                client_start(parts[1], parts[2])
+            else:
+                print("Correct usage: connect <destination_ip> <port>")
+            
         elif command == "/exit":  #Haik - Closes connection and application
             print("Exiting the program.")  
             #add the closing connections
             sys.exit(0)#Haik - the program closes
+
+
 
 def help_list():
     print("Commands available:")
@@ -199,7 +202,7 @@ if __name__ == "__main__":
     #client_start()
     
     
-    client_thread = threading.Thread(target=client_start)
-    client_thread.start()
+    #client_thread = threading.Thread(target=client_start)
+    #client_thread.start()
     
     takeCommands()
