@@ -4,9 +4,9 @@ import threading
 import sys
 
 # Jian - Special placeholder IP to tell Server to listen and accept connections from ALL IPs
-HOST = "8.8.8.8"
+HOST = "127.0.0.1"
 USERS = 4
-currentUsers = [] #Haik - lists of users with their IP
+currentUsers = {} #Haik - Stores connected users' IP : Port
 
 
 #Haik - created socket class object for the mainServer. SOCK_DGRAM lets us use tcp datagrams
@@ -34,13 +34,21 @@ def get_clientSocket(client):#Haik - gets client socket
    clientSocket = client(socket.gethostbyaddr)
    return clientSocket
 
-def manageClient(client):#Haik - puts client into user list with their IP address
-        
+def manageClient(connection):#Haik - puts client into user list with their IP address
+    connection.send(str.encode("Connected to server!"))
     while 1:
-        currentUsers.append(get_clientIP) 
+        currentUsers[connection.getsockname()[0]] = connection.getsock
         
     #threading.Thread(target = messageManager, args=(client)).start()
 
+    
+def accepting():
+    while 1: #Haik - accepts incoming connections
+        print("Server accepting connections...")
+        client, address = mainServer.accept()
+        print("Connected to " + address[0] + str(address[1]))
+        #Haik - start multi threading to manage the users 
+        threading.Thread(target = manageClient, args=(client, )).start()
 
 def whileListening():
     #Haik - listens for incoming connections
@@ -50,14 +58,6 @@ def whileListening():
     print(f"Listening...")
     acceptingThread = threading.Thread(target=accepting())
     acceptingThread.start()
-    # Jian - Currently crashes file, temporarily commented out 
-    
-def accepting():
-    while 1: #Haik - accepts incoming connections
-        print("I am accepting")
-        client, address = mainServer.accept()
-        #Haik - start multi threading to manage the users 
-        threading.Thread(target = manageClient, args=(client, )).start()
         
 
 
@@ -71,6 +71,7 @@ def server_start():
         
     except:   
         print(f"Unable to bind to host {HOST} and server port {PORT}.") #error message
+        sys.exit(1)
 
 
 #Haik - these have to match the server IP and port in order to connect 
@@ -83,24 +84,34 @@ client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 def client_start():
     #Haik - Created client instance, takes ipv4 and tcp packets
     #Jian - Changed socket parameter SOCK_STREAM to SOCK_DGRAM to connect client, had issues connecting earlier
-    #HOST = "8.8.8.8"
+    # HOST = "8.8.8.8"
 
     try: #Haik - trys connecting to server
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((HOST, PORT))
         print(f"You connected to {HOST} {PORT}!")
+        print("Client IP: " + client.getsockname()[0])
         manageClient(client)
-        
-        # Jian (debugging) - test to check your IP
-        print(f"Your IP: " + client.getsockname()[0])
+    except:
+        print(f"Unable to connect to host {HOST} and port {PORT}. ")
+        sys.exit(1)
 
+
+    try:        
+        # Jian (debugging) - test to check your IP
         listen_thread = threading.Thread(target=listen)
         listen_thread.start()
+    except:
+        print(f"Listen thread broke")
+        sys.exit(1)
         
+        
+    try:
         send_thread = threading.Thread(target=send)
         send_thread.start()
     except:
-        print(f"Unable to connect to host {HOST} and port {PORT}. ")
+        print(f"Send thread broke")
+        sys.exit(1)    
 
 
 def listen():
@@ -129,7 +140,7 @@ def send():
         message += f'Sender\'s Port: {PORT}\n'
         message += f'Message: {input("")}'
         if message[22 + len(client.getsockname()[0]) + 15 + len(PORT) + 11].startswith('/'):
-            print("this is a command")
+            print("this is a command") #Jian - Implement later
             
     
 def receive(server, message):
@@ -157,19 +168,19 @@ def help_list():
     print("8. /exit - Closes the program.")
 
 if __name__ == "__main__":
-    # Check if the port number is provided as a command-line argument
+    # Yongkang - Check if the port number is provided as a command-line argument
     if len(sys.argv) != 2:
          print("Usage: python chat.py <port>")
          #Stop the execution because the port number was not supplied
          sys.exit(1)
 
-    # Get the port number from the command-line argument
+    # Yongkang - Get the port number from the command-line argument
     PORT = int(sys.argv[1])
     
     server_thread = threading.Thread(target=server_start)
     server_thread.start()
     
-    #server_start() #Haik - Starts teh server and binds it
+    #server_start() #Haik - Starts the server and binds it
     print("Type /help for a menu of app commands.")
     #client_start()
     
