@@ -21,52 +21,6 @@ disconnect = False
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 
-
-def messageManager(client, clientIP, message):#Haik - Gets message and sends the message to everyone (work in progress)
-    print("in message thread")
-    while 1:        
-        tempMsg = client.recv(2048).decode('utf-8')#receives and decodes the message
-        if message != ' ':
-            finalMsg = clientIP + ': ' + message
-            client.sendall(finalMsg.encode()) #Haik - encodes the message then sends the message to all clients
-            
-        else:
-            print(f"The message from {clientIP}is empty.")
-
-             
-
-def get_clientIP(client): #Haik - gets client IP adress
-    clientIP = client.getsockname()[0]
-    return clientIP
-        
-def get_clientSocket(client):#Haik - gets client socket
-   clientSocket = 0
-   return clientSocket
-    
-def accepting():
-    while 1: #Haik - accepts incoming connections
-        print("Server accepting connections...")
-        client, address = mainServer.accept()
-        print("Connected to " + address[0] + str(address[1]))
-        #Haik - start multi threading to manage the users 
-
-
-
-
-def listen():
-    print(f"Listen Thread works")
-
-    while True:
-        global disconnect
-        if disconnect:
-            break
-        try:
-            message = client.recv(1024).decode('ascii')
-        except socket.error:
-            print(f"Error when connecting...")
-            client.close()      #Jian - ToDo: create server event to remove this client from all current connected users
-            break
-            
         
 def send(connection_id, message):
     # This function sends a message to a specific client identified by its connection ID
@@ -98,9 +52,6 @@ def peer_connect(peerIP, peerPort):
         connection_id = len(currentUsers) + 1  # Assign a new ID for the connection
         #Yongkang - Stores peer's socket instance, ip, and port 
         currentUsers[connection_id] = (client_socket, (peerIP, peerPort))
-        
-        # Jian - Sends message to other user to establish connection with this user/client
-        client_socket.send(str.encode("help"))
         
         print(f"Successfully connected to {peerIP} : {peerPort}")
     except Exception as e:
@@ -161,7 +112,14 @@ def takeCommands():
         elif command.startswith("terminate"):
             parts = command.split()
             if len(parts) == 2 and parts[1].isdigit():
-                terminate_connection(int(parts[1]))
+                id = int(parts[1])
+                if id in currentUsers.keys():
+                    client_socket, _ = currentUsers[id]
+                    client_socket.send(str.encode("/&terminate"))
+                    del currentUsers[id]
+                    
+                else:
+                    print("Invalid id for termination.")
             else:
                 print("Usage: terminate <connection_id>")
             
@@ -174,7 +132,9 @@ def takeCommands():
         
         elif command == "exit":
             print("Closing all connections and shutting down the server...")
+            server_ip = socket.gethostbyname(socket.gethostname())
             for client_socket, _ in currentUsers.values():
+                client_socket.send(str.encode("/&exit"))
                 client_socket.close()
             currentUsers.clear()
             print("Server shut down.")
@@ -191,14 +151,14 @@ def manageClient(client_socket, client_addr):
         while True:
             try:
                 message = client_socket.recv(1024).decode()  # Get messages from the client
-
                 
                 if message.startswith("/&connect"):
                     connection = message.split()
-                elif message.startswith("/&terminate"):
-                    
-                elif message.startswith("/&exit"):
-                    
+                elif message.startswith("/&terminate") or message.startswith("/&exit"):
+                    id = list(currentUsers.keys())[list(currentUsers.values()).index((client_socket, client_addr))]
+                    del currentUsers[id]
+                    print(f"{client_addr} has disconnected.")
+                    break                    
                 else:
                     print(f"Message from {client_addr}: {message}")
 
@@ -236,11 +196,11 @@ def server_start():
     while True:
         client_socket, client_addr = mainServer.accept()
         
-        # new_ip = client_addr[0]
-        # new_port = client_addr[1]
-        # print(f"New connection from {new_ip} : {new_port}")
-        # connection_id = len(currentUsers) + 1
-        # currentUsers[connection_id] = (client_socket, (new_ip, new_port))
+        new_ip = client_addr[0]
+        new_port = client_addr[1]
+        print(f"New connection from {new_ip} : {new_port}")
+        connection_id = len(currentUsers) + 1
+        currentUsers[connection_id] = (client_socket, (new_ip, new_port))
         
         threading.Thread(target=manageClient, args=(client_socket, client_addr)).start()
         
