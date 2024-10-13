@@ -8,10 +8,19 @@ HOST = "0.0.0.0"
 USERS = 4
 currentUsers = {} #Haik - Stores connected users' IP : Port
 
+# Yongkang - Check if the port number is provided as a command-line argument
+if len(sys.argv) != 2:
+    print("Usage: python chat.py <port>")
+    #Stop the execution because the port number was not supplied
+    sys.exit(1)
 
-#Haik - created socket class object for the mainServer. SOCK_DGRAM lets us use tcp datagrams
-mainServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# Jian - Changed SOCK_DGRAM to SOCK_STREAM to utilize socket.listen() in whileListening Function
+PORT = int(sys.argv[1])
+
+
+disconnect = False
+client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+
 
 def messageManager(client, clientIP, message):#Haik - Gets message and sends the message to everyone (work in progress)
     print("in message thread")
@@ -33,14 +42,6 @@ def get_clientIP(client): #Haik - gets client IP adress
 def get_clientSocket(client):#Haik - gets client socket
    clientSocket = 0
    return clientSocket
-
-def manageClient(connection):#Haik - puts client into user list with their IP address
-    connection.send(str.encode("Connected to server!"))
-    while 1:
-        currentUsers[connection.getsockname()[0]] = connection.getsock
-        
-    #threading.Thread(target = messageManager, args=(client)).start()
-
     
 def accepting():
     while 1: #Haik - accepts incoming connections
@@ -49,73 +50,7 @@ def accepting():
         print("Connected to " + address[0] + str(address[1]))
         #Haik - start multi threading to manage the users 
 
-def whileListening():
-    #Haik - listens for incoming connections
-    mainServer.listen(USERS)
 
-    # (Debugging): Check if enters whileListening()
-    print(f"Listening...")
-    client, address = mainServer.accept()
-    
-    #Haik - Merged the accepeting and listening function into one
-    manageClientThread = threading.Thread(target=manageClient())
-    manageClientThread.start()
-    print("I am accepting.")
-    # Jian - Currently crashes file, temporarily commented out 
-    
-
-def server_start():    
-    #Haik - after it starts running, it confirms it is set up then says it is unable to set up.
-    try:
-        #Haik - binds the server to the host and port number. if it doesnt work, it prints the error.
-        mainServer.bind((HOST, PORT))
-        print(f"Server is set up!")
-        #whileListening()
-        
-    except:   
-        print(f"Unable to bind to host {HOST} and server port {PORT}.") #error message
-        sys.exit(1)
-
-    whileListening()
-
-#Haik - these have to match the server IP and port in order to connect 
-#Haik - I THINK we cant use this IP so we'll need to change it, keeping for now so we can test stuff. 
-#Jian - Changed HOST to '8.8.8.8' to utilize user's IP as parameter
-
-disconnect = False
-client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    
-def client_start(IP, passPort):
-    #Haik - Created client instance, takes ipv4 and tcp packets
-    #Jian - Changed socket parameter SOCK_STREAM to SOCK_DGRAM to connect client, had issues connecting earlier
-    # HOST = "8.8.8.8"
-
-    try: #Haik - trys connecting to server
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((IP, passPort))
-        print(f"You connected to {IP} {passPort}!")
-        print("Client IP: " + client.getsockname()[0])
-        manageClient(client)
-    except:
-        print(f"Unable to connect to host {IP} and port {passPort}. ")
-        sys.exit(1)
-
-
-    try:        
-        # Jian (debugging) - test to check your IP
-        listen_thread = threading.Thread(target=listen)
-        listen_thread.start()
-    except:
-        print(f"Listen thread broke")
-        sys.exit(1)
-        
-        
-    try:
-        send_thread = threading.Thread(target=send)
-        send_thread.start()
-    except:
-        print(f"Send thread broke")
-        sys.exit(1)    
 
 
 def listen():
@@ -133,76 +68,182 @@ def listen():
             break
             
         
-def send():
-    print(f"Send Thread works")
+def send(connection_id, message):
+    # This function sends a message to a specific client identified by its connection ID
+    if connection_id in currentUsers:
+        client_socket, client_address = currentUsers[connection_id]
+        try:
+            client_socket.send(str.encode(message))
+            print(f"Message sent to {client_address}: {message}")
+        except Exception as e:
+            print(f"Failed to send message to {client_address}.\nReason: {e}")
+    else:
+        print("Invalid connection ID.")
 
-    while True:
-        if disconnect:
-            break
-        # Jian - asks for input and formats message
-        message = f'Message received from {client.getsockname()[0]}\n'
-        message += f'Sender\'s Port: {PORT}\n'
-        message += f'Message: {input("")}'
-        if message[22 + len(client.getsockname()[0]) + 15 + len(PORT) + 11].startswith('/'):
-            print("this is a command") #Jian - Implement later
-            
 
-def takeCommands(): #Haik - method for detecting and processing commands
-    while True:
-        command = input().strip()#Haik - prints comand menu without spaces
-        if command == '/help':
-            help_list()
-            
-        elif command == '/myip': #Haik - prints ip
-            print("Your IP is: " + str(get_clientIP(client)))
-            
-        elif command == "/myport":#Haik - prints port
-            print("Your port is: " + str(get_clientSocket(client)))
-            
-        elif command == "/connect":
-            parts = command.split()
-            if len(parts) == 3:
-                client_start(parts[1], parts[2])
-            else:
-                print("Correct usage: connect <destination_ip> <port>")
-            
-        elif command == "/exit":  #Haik - Closes connection and application
-            print("Exiting the program.")  
-            #add the closing connections
-            sys.exit(0)#Haik - the program closes
+def peer_connect(peerIP, peerPort):
+    # Jian - Reject if trying to connect to itself
+    if(peerIP == socket.gethostbyname(socket.gethostname()) and peerPort == PORT):
+        print("You cannot connect to your own server.")
+        return
+    # Jian - Rejects duplicate connections
+    elif ( (peerIP, peerPort) in currentUsers.values()):
+        print("This connection already exists.")
+        return
+    
+    #Haik - Created client instance, takes ipv4 and tcp packets
+    try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((peerIP, int(peerPort)))
+        connection_id = len(currentUsers) + 1  # Assign a new ID for the connection
+        #Yongkang - Stores peer's socket instance, ip, and port 
+        currentUsers[connection_id] = (client_socket, (peerIP, peerPort))
+        
+        # Jian - Sends message to other user to establish connection with this user/client
+        client_socket.send(str.encode("help"))
+        
+        print(f"Successfully connected to {peerIP} : {peerPort}")
+    except Exception as e:
+        print(f"Couldn't connect to {peerIP}:{peerPort}.\nReason: {e}")
 
 
 
 def help_list():
     print("Commands available:")
-    print("1. /help - Display the available commands.")
-    print("2. /myip - Display the IP address of this process.")
-    print("3. /myport - Display the port on which this process is listening.")
-    print("4. /connect <destination> <port> - Connect to a remote peer.")
-    print("5. /list - Display a list of active connections.")
-    print("6. /terminate <connection id> - Terminate a connection.")
-    print("7. /send <connection id> <message> - Send a message to a connection.")
-    print("8. /exit - Closes the program.")
+    print("1. help - Display the available commands.")
+    print("2. myip - Display the IP address of this process.")
+    print("3. myport - Display the port on which this process is listening.")
+    print("4. connect <destination> <port> - Connect to a remote peer.")
+    print("5. list - Display a list of active connections.")
+    print("6. terminate <connection id> - Terminate a connection.")
+    print("7. send <connection id> <message> - Send a message to a connection.")
+    print("8. exit - Closes the program.")    
+
+
+
+# Yongkang - Lists all connections and respective IDs
+def list_connections():
+    if currentUsers:
+        print("Active connections:")
+        for connection_id, (_, (client_ip, client_port)) in currentUsers.items():
+            print(f"{connection_id}: {client_ip} : {client_port}")
+    else:
+        print("No active connections.")
+        
+
+#Haik - method for detecting and processing commands
+def takeCommands(): 
+    print("Type 'help' for a menu of app commands.")
+    while True:
+        #Haik - prints command menu without spaces
+        command = input("> ").strip()
+        
+        if command.startswith("help"):
+            help_list()
+            
+        elif command.startswith("myip"): #Haik - prints ip
+            your_ip = socket.gethostbyname(socket.gethostname())
+            print(f"Your IP: {your_ip}")
+            
+        elif command.startswith("myport"):#Haik - prints port
+            print(f"Your port: {PORT}")
+            
+        elif command.startswith("connect"):
+            parts = command.split()
+            if len(parts) == 3:
+                peer_connect(parts[1], parts[2])
+            else:
+                print("Correct usage: connect <destination_ip> <port>")
+            
+        elif command == "list":
+            list_connections()
+            
+        elif command.startswith("terminate"):
+            parts = command.split()
+            if len(parts) == 2 and parts[1].isdigit():
+                terminate_connection(int(parts[1]))
+            else:
+                print("Usage: terminate <connection_id>")
+            
+        elif command.startswith("send"):
+            parts = command.split(maxsplit=2)
+            if len(parts) == 3 and parts[1].isdigit():
+                send(int(parts[1]), parts[2])
+            else:
+                print("Usage: send <connection_id> <message>")
+        
+        elif command == "exit":
+            print("Closing all connections and shutting down the server...")
+            for client_socket, _ in currentUsers.values():
+                client_socket.close()
+            currentUsers.clear()
+            print("Server shut down.")
+            sys.exit(0)
+            
+        else:
+            print("Unknown command. Type 'help' to see the list of commands.")
+    
+
+# Jian - Server handling incoming msgs from newly connected clients/users
+def manageClient(client_socket, client_addr):
+    # This function manages incoming messages from a connected client
+    try:
+        while True:
+            try:
+                message = client_socket.recv(1024).decode()  # Get messages from the client
+
+                
+                if message.startswith("/&connect"):
+                    connection = message.split()
+                elif message.startswith("/&terminate"):
+                    
+                elif message.startswith("/&exit"):
+                    
+                else:
+                    print(f"Message from {client_addr}: {message}")
+
+            except ConnectionAbortedError:
+                # This exception happens if the server closes the connection
+                print(f"Connection with {client_addr} ended by the server.")
+                break  # Exit the loop
+
+    except ConnectionResetError:
+        # This exception happens if the client forcefully closes the connection
+        print(f"Lost connection to {client_addr}.")
+    finally:
+        client_socket.close()  # Always make sure to close the connection
+    
+
+    
+def server_start(): 
+    #Haik - created socket class object for the mainServer.
+    mainServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    try:
+        #Haik - binds the server to the host and port number. if it doesnt work, it prints the error.
+        mainServer.bind(('', PORT))
+        mainServer.listen(USERS)
+        server_ip = socket.gethostbyname(socket.gethostname())
+        print(f"Server is running at {server_ip} : {PORT}.")
+        
+    except:   
+        print(f"Unable to bind to host {HOST} and server port {PORT}.") #error message
+        sys.exit(1)
+    
+    # Jian - Start accepting input
+    threading.Thread(target=takeCommands, daemon=True).start()
+
+    while True:
+        client_socket, client_addr = mainServer.accept()
+        
+        # new_ip = client_addr[0]
+        # new_port = client_addr[1]
+        # print(f"New connection from {new_ip} : {new_port}")
+        # connection_id = len(currentUsers) + 1
+        # currentUsers[connection_id] = (client_socket, (new_ip, new_port))
+        
+        threading.Thread(target=manageClient, args=(client_socket, client_addr)).start()
+        
 
 if __name__ == "__main__":
-    # Yongkang - Check if the port number is provided as a command-line argument
-    if len(sys.argv) != 2:
-         print("Usage: python chat.py <port>")
-         #Stop the execution because the port number was not supplied
-         sys.exit(1)
-
-    # Yongkang - Get the port number from the command-line argument
-    PORT = int(sys.argv[1])
-    
-    server_thread = threading.Thread(target=server_start)
-    server_thread.start()
-    
-    #server_start() #Haik - Starts the server and binds it
-    print("Type /help for a menu of app commands.")
-    #client_start()
-    
-    
-    #client_thread = threading.Thread(target=client_start)
-    #client_thread.start()
-    
-    takeCommands()
+    server_start()
